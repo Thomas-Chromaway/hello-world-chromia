@@ -16,18 +16,21 @@ RUN apt-get update
 RUN curl -fsSL https://deb.nodesource.com/setup_23.x | bash
 RUN apt-get install -y nodejs
 
+# Start on CHR completions (needs to go in before Postgres service start)
+RUN echo "source ~/.chr-completion.bash" >> ~vscode/.profile
+
 # Postgres
-RUN apt-get install -y postgresql-client postgresql postgresql-contrib
+RUN apt-get install -y postgresql-client postgresql
 RUN mkdir -p /var/lib/postgresql/data
 RUN echo "sudo service postgresql start" >> ~vscode/.profile
 # Postchain default database 
 RUN service postgresql start && sudo -u postgres psql -U postgres -c "CREATE DATABASE postchain WITH TEMPLATE = template0 LC_COLLATE = 'C.UTF-8' LC_CTYPE = 'C.UTF-8' ENCODING 'UTF-8';" -c "CREATE ROLE postchain LOGIN ENCRYPTED PASSWORD 'postchain'; GRANT ALL ON DATABASE postchain TO postchain;"
 # Add default database, user, and password into the global environment
-ENV PGHOST localhost
-ENV PGPORT 5432
-ENV PGDATABASE postchain
-ENV PGUSER postchain
-ENV PGPASSWORD postchain
+ENV PGHOST=localhost
+ENV PGPORT=5432
+ENV PGDATABASE=postchain
+ENV PGUSER=postchain
+ENV PGPASSWORD=postchain
 
 # Install CHR and PMC
 RUN curl -fsSL https://apt.chromia.com/chromia.gpg > /usr/share/keyrings/chromia.gpg
@@ -37,3 +40,7 @@ RUN apt-get download chr:amd64
 RUN dpkg --force-architecture --ignore-depends=chr -i chr_*.deb || true; rm chr_*_amd64.deb
 RUN apt-get download pmc:amd64
 RUN dpkg --force-architecture -i pmc_*.deb && rm pmc_*_amd64.deb
+
+# Complete completions for chr
+RUN chr --generate-completion=bash > ~vscode/.chr-completion.bash
+RUN chown vscode ~vscode/.chr-completion.bash

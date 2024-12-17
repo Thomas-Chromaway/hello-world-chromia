@@ -20,7 +20,7 @@ RUN apt-get install -y nodejs
 RUN echo "source ~/.chr-completion.bash" >> ~vscode/.profile
 
 # Postgres
-RUN apt-get install -y postgresql-client postgresql
+RUN apt-get install -y postgresql-client postgresql postgresql-contrib
 RUN mkdir -p /var/lib/postgresql/data
 RUN echo "sudo service postgresql start" >> ~vscode/.profile
 # Postchain default database 
@@ -41,6 +41,16 @@ RUN dpkg --force-architecture --ignore-depends=chr -i chr_*.deb || true; rm chr_
 RUN apt-get download pmc:amd64
 RUN dpkg --force-architecture -i pmc_*.deb && rm pmc_*_amd64.deb
 
+# Wrap a warning around pmc in case this is running in a remote environment
+COPY warn_once.sh /usr/local/bin/warn_once.sh
+RUN chmod +x /usr/local/bin/warn_once.sh
+RUN echo "source /usr/local/bin/warn_once.sh" > ~vscode/.bash_aliases
+RUN echo "alias pmc='warn_once \"Be careful using the pmc command to handle key material in remote enviroments\!\" \"pmc_command\" pmc'" >> ~vscode/.bash_aliases
+RUN chown vscode ~vscode/.bash_aliases
+
 # Complete completions for chr
 RUN chr --generate-completion=bash > ~vscode/.chr-completion.bash
 RUN chown vscode ~vscode/.chr-completion.bash
+
+# Install commonly used npm tools
+RUN npm install -g bun pnpm
